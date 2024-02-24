@@ -7,6 +7,7 @@ use std::process::ExitCode;
 use std::sync::mpsc::channel;
 
 use anyhow::Result;
+use args::ServerCommand;
 use clap::CommandFactory;
 use colored::Colorize;
 use log::warn;
@@ -200,6 +201,7 @@ pub fn run(
         }
         Command::Check(args) => check(args, log_level),
         Command::Format(args) => format(args, log_level),
+        Command::Server(args) => server(args, log_level),
     }
 }
 
@@ -211,6 +213,12 @@ fn format(args: FormatCommand, log_level: LogLevel) -> Result<ExitStatus> {
     } else {
         commands::format::format(cli, &config_arguments, log_level)
     }
+}
+
+#[allow(clippy::needless_pass_by_value)] // TODO: remove once we start taking arguments from here
+fn server(args: ServerCommand, log_level: LogLevel) -> Result<ExitStatus> {
+    let ServerCommand {} = args;
+    commands::server::run_server(log_level)
 }
 
 pub fn check(args: CheckCommand, log_level: LogLevel) -> Result<ExitStatus> {
