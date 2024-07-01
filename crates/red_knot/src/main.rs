@@ -11,8 +11,8 @@ use tracing_subscriber::layer::{Context, Filter, SubscriberExt};
 use tracing_subscriber::{Layer, Registry};
 use tracing_tree::time::Uptime;
 
-use red_knot::db::{HasJar, ParallelDatabase, QueryError, SemanticDb, SourceDb, SourceJar};
-use red_knot::module::{ModuleSearchPath, ModuleSearchPathKind};
+use red_knot::db::{HasJar, ParallelDatabase, QueryError, SourceDb, SourceJar};
+use red_knot::module::{set_module_search_paths, ModuleResolutionInputs};
 use red_knot::program::check::ExecutionMode;
 use red_knot::program::{FileWatcherChange, Program};
 use red_knot::watch::FileWatcher;
@@ -44,12 +44,17 @@ fn main() -> anyhow::Result<()> {
     let workspace_folder = entry_point.parent().unwrap();
     let workspace = Workspace::new(workspace_folder.to_path_buf());
 
-    let workspace_search_path = ModuleSearchPath::new(
-        workspace.root().to_path_buf(),
-        ModuleSearchPathKind::FirstParty,
-    );
+    let workspace_search_path = workspace.root().to_path_buf();
+
+    let search_paths = ModuleResolutionInputs {
+        extra_paths: vec![],
+        workspace_root: workspace_search_path,
+        site_packages: None,
+        custom_typeshed: None,
+    };
+
     let mut program = Program::new(workspace);
-    program.set_module_search_paths(vec![workspace_search_path]);
+    set_module_search_paths(&mut program, search_paths);
 
     let entry_id = program.file_id(entry_point);
     program.workspace_mut().open_file(entry_id);
