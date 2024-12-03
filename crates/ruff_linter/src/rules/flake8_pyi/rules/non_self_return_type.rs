@@ -3,7 +3,7 @@ use ruff_python_ast::{self as ast, Decorator, Expr, Parameters, Stmt};
 use crate::checkers::ast::Checker;
 use crate::importer::ImportRequest;
 use ruff_diagnostics::{Diagnostic, Edit, Fix, FixAvailability, Violation};
-use ruff_macros::{derive_message_formats, violation};
+use ruff_macros::{derive_message_formats, ViolationMetadata};
 use ruff_python_ast::helpers::map_subscript;
 use ruff_python_ast::identifier::Identifier;
 use ruff_python_semantic::analyze;
@@ -73,8 +73,8 @@ use ruff_text_size::{Ranged, TextRange};
 /// ```
 /// ## References
 /// - [Python documentation: `typing.Self`](https://docs.python.org/3/library/typing.html#typing.Self)
-#[violation]
-pub struct NonSelfReturnType {
+#[derive(ViolationMetadata)]
+pub(crate) struct NonSelfReturnType {
     class_name: String,
     method_name: String,
 }
@@ -126,7 +126,7 @@ pub(crate) fn non_self_return_type(
     };
 
     // PEP 673 forbids the use of `typing(_extensions).Self` in metaclasses.
-    if analyze::class::is_metaclass(class_def, semantic) {
+    if analyze::class::is_metaclass(class_def, semantic).into() {
         return;
     }
 
