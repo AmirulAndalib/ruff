@@ -309,12 +309,20 @@ pub(crate) fn statement(stmt: &Stmt, checker: &mut Checker) {
                     body,
                 );
             }
-            if checker.any_enabled(&[
-                Rule::PytestParametrizeNamesWrongType,
-                Rule::PytestParametrizeValuesWrongType,
-                Rule::PytestDuplicateParametrizeTestCases,
-            ]) {
-                flake8_pytest_style::rules::parametrize(checker, decorator_list);
+            // In preview mode, calls are analyzed. To avoid duplicate diagnostics,
+            // skip analyzing the decorators.
+            if !checker.settings.preview.is_enabled()
+                && checker.any_enabled(&[
+                    Rule::PytestParametrizeNamesWrongType,
+                    Rule::PytestParametrizeValuesWrongType,
+                    Rule::PytestDuplicateParametrizeTestCases,
+                ])
+            {
+                for decorator in decorator_list {
+                    if let Some(call) = decorator.expression.as_call_expr() {
+                        flake8_pytest_style::rules::parametrize(checker, call);
+                    }
+                }
             }
             if checker.any_enabled(&[
                 Rule::PytestIncorrectMarkParenthesesStyle,
@@ -1268,6 +1276,9 @@ pub(crate) fn statement(stmt: &Stmt, checker: &mut Checker) {
             if checker.enabled(Rule::AssertWithPrintMessage) {
                 ruff::rules::assert_with_print_message(checker, assert_stmt);
             }
+            if checker.enabled(Rule::InvalidAssertMessageLiteralArgument) {
+                ruff::rules::invalid_assert_message_literal_argument(checker, assert_stmt);
+            }
         }
         Stmt::With(
             with_stmt @ ast::StmtWith {
@@ -1543,11 +1554,7 @@ pub(crate) fn statement(stmt: &Stmt, checker: &mut Checker) {
                 .rules
                 .enabled(Rule::AirflowVariableNameTaskIdMismatch)
             {
-                if let Some(diagnostic) =
-                    airflow::rules::variable_name_task_id(checker, targets, value)
-                {
-                    checker.diagnostics.push(diagnostic);
-                }
+                airflow::rules::variable_name_task_id(checker, targets, value);
             }
             if checker.settings.rules.enabled(Rule::SelfAssigningVariable) {
                 pylint::rules::self_assignment(checker, assign);

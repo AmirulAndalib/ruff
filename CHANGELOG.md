@@ -1,5 +1,83 @@
 # Changelog
 
+## 0.8.2
+
+### Preview features
+
+- \[`airflow`\] Avoid deprecated values (`AIR302`) ([#14582](https://github.com/astral-sh/ruff/pull/14582))
+- \[`airflow`\] Extend removed names for `AIR302` ([#14734](https://github.com/astral-sh/ruff/pull/14734))
+- \[`ruff`\] Extend `unnecessary-regular-expression` to non-literal strings (`RUF055`) ([#14679](https://github.com/astral-sh/ruff/pull/14679))
+- \[`ruff`\] Implement `used-dummy-variable` (`RUF052`) ([#14611](https://github.com/astral-sh/ruff/pull/14611))
+- \[`ruff`\] Implement `unnecessary-cast-to-int` (`RUF046`) ([#14697](https://github.com/astral-sh/ruff/pull/14697))
+
+### Rule changes
+
+- \[`airflow`\] Check `AIR001` from builtin or providers `operators` module ([#14631](https://github.com/astral-sh/ruff/pull/14631))
+- \[`flake8-pytest-style`\] Remove `@` in `pytest.mark.parametrize` rule messages ([#14770](https://github.com/astral-sh/ruff/pull/14770))
+- \[`pandas-vet`\] Skip rules if the `panda` module hasn't been seen ([#14671](https://github.com/astral-sh/ruff/pull/14671))
+- \[`pylint`\] Fix false negatives for `ascii` and `sorted` in `len-as-condition` (`PLC1802`) ([#14692](https://github.com/astral-sh/ruff/pull/14692))
+- \[`refurb`\] Guard `hashlib` imports and mark `hashlib-digest-hex` fix as safe (`FURB181`) ([#14694](https://github.com/astral-sh/ruff/pull/14694))
+
+### Configuration
+
+- \[`flake8-import-conventions`\] Improve syntax check for aliases supplied in configuration for `unconventional-import-alias` (`ICN001`) ([#14745](https://github.com/astral-sh/ruff/pull/14745))
+
+### Bug fixes
+
+- Revert: [pyflakes] Avoid false positives in `@no_type_check` contexts (`F821`, `F722`) (#14615) ([#14726](https://github.com/astral-sh/ruff/pull/14726))
+- \[`pep8-naming`\] Avoid false positive for `class Bar(type(foo))` (`N804`) ([#14683](https://github.com/astral-sh/ruff/pull/14683))
+- \[`pycodestyle`\] Handle f-strings properly for `invalid-escape-sequence` (`W605`) ([#14748](https://github.com/astral-sh/ruff/pull/14748))
+- \[`pylint`\] Ignore `@overload` in `PLR0904` ([#14730](https://github.com/astral-sh/ruff/pull/14730))
+- \[`refurb`\] Handle non-finite decimals in `verbose-decimal-constructor` (`FURB157`) ([#14596](https://github.com/astral-sh/ruff/pull/14596))
+- \[`ruff`\] Avoid emitting `assignment-in-assert` when all references to the assigned variable are themselves inside `assert`s (`RUF018`) ([#14661](https://github.com/astral-sh/ruff/pull/14661))
+
+### Documentation
+
+- Improve docs for `flake8-use-pathlib` rules ([#14741](https://github.com/astral-sh/ruff/pull/14741))
+- Improve error messages and docs for `flake8-comprehensions` rules ([#14729](https://github.com/astral-sh/ruff/pull/14729))
+- \[`flake8-type-checking`\] Expands `TC006` docs to better explain itself ([#14749](https://github.com/astral-sh/ruff/pull/14749))
+
+## 0.8.1
+
+### Preview features
+
+- Formatter: Avoid invalid syntax for format-spec with quotes for all Python versions ([#14625](https://github.com/astral-sh/ruff/pull/14625))
+- Formatter: Consider quotes inside format-specs when choosing the quotes for an f-string ([#14493](https://github.com/astral-sh/ruff/pull/14493))
+- Formatter: Do not consider f-strings with escaped newlines as multiline ([#14624](https://github.com/astral-sh/ruff/pull/14624))
+- Formatter: Fix f-string formatting in assignment statement ([#14454](https://github.com/astral-sh/ruff/pull/14454))
+- Formatter: Fix unnecessary space around power operator (`**`) in overlong f-string expressions ([#14489](https://github.com/astral-sh/ruff/pull/14489))
+- \[`airflow`\] Avoid implicit `schedule` argument to `DAG` and `@dag` (`AIR301`) ([#14581](https://github.com/astral-sh/ruff/pull/14581))
+- \[`flake8-builtins`\] Exempt private built-in modules (`A005`) ([#14505](https://github.com/astral-sh/ruff/pull/14505))
+- \[`flake8-pytest-style`\] Fix `pytest.mark.parametrize` rules to check calls instead of decorators ([#14515](https://github.com/astral-sh/ruff/pull/14515))
+- \[`flake8-type-checking`\] Implement `runtime-cast-value` (`TC006`) ([#14511](https://github.com/astral-sh/ruff/pull/14511))
+- \[`flake8-type-checking`\] Implement `unquoted-type-alias` (`TC007`) and `quoted-type-alias` (`TC008`) ([#12927](https://github.com/astral-sh/ruff/pull/12927))
+- \[`flake8-use-pathlib`\] Recommend `Path.iterdir()` over `os.listdir()` (`PTH208`) ([#14509](https://github.com/astral-sh/ruff/pull/14509))
+- \[`pylint`\] Extend `invalid-envvar-default` to detect `os.environ.get` (`PLW1508`) ([#14512](https://github.com/astral-sh/ruff/pull/14512))
+- \[`pylint`\] Implement `len-test` (`PLC1802`) ([#14309](https://github.com/astral-sh/ruff/pull/14309))
+- \[`refurb`\] Fix bug where methods defined using lambdas were flagged by `FURB118` ([#14639](https://github.com/astral-sh/ruff/pull/14639))
+- \[`ruff`\] Auto-add `r` prefix when string has no backslashes for `unraw-re-pattern` (`RUF039`) ([#14536](https://github.com/astral-sh/ruff/pull/14536))
+- \[`ruff`\] Implement `invalid-assert-message-literal-argument` (`RUF040`) ([#14488](https://github.com/astral-sh/ruff/pull/14488))
+- \[`ruff`\] Implement `unnecessary-nested-literal` (`RUF041`) ([#14323](https://github.com/astral-sh/ruff/pull/14323))
+- \[`ruff`\] Implement `unnecessary-regular-expression` (`RUF055`) ([#14659](https://github.com/astral-sh/ruff/pull/14659))
+
+### Rule changes
+
+- Ignore more rules for stub files ([#14541](https://github.com/astral-sh/ruff/pull/14541))
+- \[`pep8-naming`\] Eliminate false positives for single-letter names (`N811`, `N814`) ([#14584](https://github.com/astral-sh/ruff/pull/14584))
+- \[`pyflakes`\] Avoid false positives in `@no_type_check` contexts (`F821`, `F722`) ([#14615](https://github.com/astral-sh/ruff/pull/14615))
+- \[`ruff`\] Detect redirected-noqa in file-level comments (`RUF101`) ([#14635](https://github.com/astral-sh/ruff/pull/14635))
+- \[`ruff`\] Mark fixes for `unsorted-dunder-all` and `unsorted-dunder-slots` as unsafe when there are complex comments in the sequence (`RUF022`, `RUF023`) ([#14560](https://github.com/astral-sh/ruff/pull/14560))
+
+### Bug fixes
+
+- Avoid fixing code to `None | None` for `redundant-none-literal` (`PYI061`) and `never-union` (`RUF020`) ([#14583](https://github.com/astral-sh/ruff/pull/14583), [#14589](https://github.com/astral-sh/ruff/pull/14589))
+- \[`flake8-bugbear`\] Fix `mutable-contextvar-default` to resolve annotated function calls properly (`B039`) ([#14532](https://github.com/astral-sh/ruff/pull/14532))
+- \[`flake8-pyi`, `ruff`\] Fix traversal of nested literals and unions (`PYI016`, `PYI051`, `PYI055`, `PYI062`, `RUF041`) ([#14641](https://github.com/astral-sh/ruff/pull/14641))
+- \[`flake8-pyi`\] Avoid rewriting invalid type expressions in `unnecessary-type-union` (`PYI055`) ([#14660](https://github.com/astral-sh/ruff/pull/14660))
+- \[`flake8-type-checking`\] Avoid syntax errors and type checking problem for quoted annotations autofix (`TC003`, `TC006`) ([#14634](https://github.com/astral-sh/ruff/pull/14634))
+- \[`pylint`\] Do not wrap function calls in parentheses in the fix for unnecessary-dunder-call (`PLC2801`) ([#14601](https://github.com/astral-sh/ruff/pull/14601))
+- \[`ruff`\] Handle `attrs`'s `auto_attribs` correctly (`RUF009`) ([#14520](https://github.com/astral-sh/ruff/pull/14520))
+
 ## 0.8.0
 
 Check out the [blog post](https://astral.sh/blog/ruff-v0.8.0) for a migration guide and overview of the changes!
@@ -216,7 +294,7 @@ The following fixes have been stabilized:
 ### Preview features
 
 - Fix `E221` and `E222` to flag missing or extra whitespace around `==` operator ([#13890](https://github.com/astral-sh/ruff/pull/13890))
-- Formatter: Alternate quotes for strings inside f-strings in preview  ([#13860](https://github.com/astral-sh/ruff/pull/13860))
+- Formatter: Alternate quotes for strings inside f-strings in preview ([#13860](https://github.com/astral-sh/ruff/pull/13860))
 - Formatter: Join implicit concatenated strings when they fit on a line ([#13663](https://github.com/astral-sh/ruff/pull/13663))
 - \[`pylint`\] Restrict `iteration-over-set` to only work on sets of literals (`PLC0208`) ([#13731](https://github.com/astral-sh/ruff/pull/13731))
 
@@ -1231,7 +1309,7 @@ To read more about this exciting milestone, check out our [blog post](https://as
 ### Preview features
 
 - \[`pycodestyle`\] Ignore end-of-line comments when determining blank line rules ([#11342](https://github.com/astral-sh/ruff/pull/11342))
-- \[`pylint`\] Detect `pathlib.Path.open` calls in `unspecified-encoding` (`PLW1514`)  ([#11288](https://github.com/astral-sh/ruff/pull/11288))
+- \[`pylint`\] Detect `pathlib.Path.open` calls in `unspecified-encoding` (`PLW1514`) ([#11288](https://github.com/astral-sh/ruff/pull/11288))
 - \[`flake8-pyi`\] Implement `PYI059` (`generic-not-last-base-class`) ([#11233](https://github.com/astral-sh/ruff/pull/11233))
 - \[`flake8-pyi`\] Implement `PYI062` (`duplicate-literal-member`) ([#11269](https://github.com/astral-sh/ruff/pull/11269))
 
@@ -1606,7 +1684,7 @@ To setup `ruff server` with your editor, refer to the [README.md](https://github
 - \[`pycodestyle`\] Do not ignore lines before the first logical line in blank lines rules. ([#10382](https://github.com/astral-sh/ruff/pull/10382))
 - \[`pycodestyle`\] Do not trigger `E225` and `E275` when the next token is a ')' ([#10315](https://github.com/astral-sh/ruff/pull/10315))
 - \[`pylint`\] Avoid false-positive slot non-assignment for `__dict__` (`PLE0237`) ([#10348](https://github.com/astral-sh/ruff/pull/10348))
-- Gate f-string struct size test for Rustc \< 1.76 ([#10371](https://github.com/astral-sh/ruff/pull/10371))
+- Gate f-string struct size test for Rustc < 1.76 ([#10371](https://github.com/astral-sh/ruff/pull/10371))
 
 ### Documentation
 

@@ -289,7 +289,7 @@ struct DisplayMaybeNegatedType<'db> {
     negated: bool,
 }
 
-impl<'db> Display for DisplayMaybeNegatedType<'db> {
+impl Display for DisplayMaybeNegatedType<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if self.negated {
             f.write_str("~")?;
@@ -319,7 +319,7 @@ pub(crate) struct DisplayTypeArray<'b, 'db> {
     db: &'db dyn Db,
 }
 
-impl<'db> Display for DisplayTypeArray<'_, 'db> {
+impl Display for DisplayTypeArray<'_, '_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.join(", ")
             .entries(self.types.iter().map(|ty| ty.display(self.db)))
@@ -357,31 +357,10 @@ impl Display for DisplayStringLiteralType<'_> {
 #[cfg(test)]
 mod tests {
     use ruff_db::files::system_path_to_file;
-    use ruff_db::system::{DbWithTestSystem, SystemPathBuf};
+    use ruff_db::system::DbWithTestSystem;
 
-    use crate::db::tests::TestDb;
+    use crate::db::tests::setup_db;
     use crate::types::{global_symbol, SliceLiteralType, StringLiteralType, Type, UnionType};
-    use crate::{Program, ProgramSettings, PythonVersion, SearchPathSettings};
-
-    fn setup_db() -> TestDb {
-        let db = TestDb::new();
-
-        let src_root = SystemPathBuf::from("/src");
-        db.memory_file_system()
-            .create_directory_all(&src_root)
-            .unwrap();
-
-        Program::from_settings(
-            &db,
-            &ProgramSettings {
-                target_version: PythonVersion::default(),
-                search_paths: SearchPathSettings::new(src_root),
-            },
-        )
-        .expect("Valid search path settings");
-
-        db
-    }
 
     #[test]
     fn test_condense_literal_display_by_type() -> anyhow::Result<()> {
