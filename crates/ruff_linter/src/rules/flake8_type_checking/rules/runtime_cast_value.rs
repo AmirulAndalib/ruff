@@ -1,18 +1,29 @@
 use ruff_python_ast::Expr;
 
-use ruff_diagnostics::{Diagnostic, Fix, FixAvailability, Violation};
-use ruff_macros::{derive_message_formats, violation};
+use ruff_diagnostics::{AlwaysFixableViolation, Diagnostic, Fix};
+use ruff_macros::{derive_message_formats, ViolationMetadata};
 use ruff_text_size::Ranged;
 
 use crate::checkers::ast::Checker;
 use crate::rules::flake8_type_checking::helpers::quote_type_expression;
 
 /// ## What it does
-/// Checks for an unquoted type expression in `typing.cast()` calls.
+/// Checks for unquoted type expressions in `typing.cast()` calls.
 ///
 /// ## Why is this bad?
-/// `typing.cast()` does not do anything at runtime, so the time spent
-/// on evaluating the type expression is wasted.
+/// This rule helps enforce a consistent style across your codebase.
+///
+/// It's often necessary to quote the first argument passed to `cast()`,
+/// as type expressions can involve forward references, or references
+/// to symbols which are only imported in `typing.TYPE_CHECKING` blocks.
+/// This can lead to a visual inconsistency across different `cast()` calls,
+/// where some type expressions are quoted but others are not. By enabling
+/// this rule, you ensure that all type expressions passed to `cast()` are
+/// quoted, enforcing stylistic consistency across all of your `cast()` calls.
+///
+/// In some cases where `cast()` is used in a hot loop, this rule may also
+/// help avoid overhead from repeatedly evaluating complex type expressions at
+/// runtime.
 ///
 /// ## Example
 /// ```python
@@ -31,19 +42,17 @@ use crate::rules::flake8_type_checking::helpers::quote_type_expression;
 /// ## Fix safety
 /// This fix is safe as long as the type expression doesn't span multiple
 /// lines and includes comments on any of the lines apart from the last one.
-#[violation]
-pub struct RuntimeCastValue;
+#[derive(ViolationMetadata)]
+pub(crate) struct RuntimeCastValue;
 
-impl Violation for RuntimeCastValue {
-    const FIX_AVAILABILITY: FixAvailability = FixAvailability::Sometimes;
-
+impl AlwaysFixableViolation for RuntimeCastValue {
     #[derive_message_formats]
     fn message(&self) -> String {
         "Add quotes to type expression in `typing.cast()`".to_string()
     }
 
-    fn fix_title(&self) -> Option<String> {
-        Some("Add quotes".to_string())
+    fn fix_title(&self) -> String {
+        "Add quotes".to_string()
     }
 }
 
@@ -54,16 +63,19 @@ pub(crate) fn runtime_cast_value(checker: &mut Checker, type_expr: &Expr) {
     }
 
     let mut diagnostic = Diagnostic::new(RuntimeCastValue, type_expr.range());
-    let edit = quote_type_expression(type_expr, checker.semantic(), checker.stylist()).ok();
-    if let Some(edit) = edit {
-        if checker
-            .comment_ranges()
-            .has_comments(type_expr, checker.source())
-        {
-            diagnostic.set_fix(Fix::unsafe_edit(edit));
-        } else {
-            diagnostic.set_fix(Fix::safe_edit(edit));
-        }
+    let edit = quote_type_expression(
+        type_expr,
+        checker.semantic(),
+        checker.stylist(),
+        checker.locator(),
+    );
+    if checker
+        .comment_ranges()
+        .has_comments(type_expr, checker.source())
+    {
+        diagnostic.set_fix(Fix::unsafe_edit(edit));
+    } else {
+        diagnostic.set_fix(Fix::safe_edit(edit));
     }
     checker.diagnostics.push(diagnostic);
 }
