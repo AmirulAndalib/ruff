@@ -1,5 +1,5 @@
 use ruff_diagnostics::{Diagnostic, Edit, Fix, FixAvailability, Violation};
-use ruff_macros::{derive_message_formats, violation};
+use ruff_macros::{derive_message_formats, ViolationMetadata};
 use ruff_python_ast::helpers::ReturnStatementVisitor;
 use ruff_python_ast::identifier::Identifier;
 use ruff_python_ast::visitor::Visitor;
@@ -33,8 +33,11 @@ use crate::rules::ruff::typing::type_hint_resolves_to_any;
 /// ```python
 /// def foo(x: int): ...
 /// ```
-#[violation]
-pub struct MissingTypeFunctionArgument {
+///
+/// ## Options
+/// - `lint.flake8-annotations.suppress-dummy-args`
+#[derive(ViolationMetadata)]
+pub(crate) struct MissingTypeFunctionArgument {
     name: String,
 }
 
@@ -65,8 +68,11 @@ impl Violation for MissingTypeFunctionArgument {
 /// ```python
 /// def foo(*args: int): ...
 /// ```
-#[violation]
-pub struct MissingTypeArgs {
+///
+/// ## Options
+/// - `lint.flake8-annotations.suppress-dummy-args`
+#[derive(ViolationMetadata)]
+pub(crate) struct MissingTypeArgs {
     name: String,
 }
 
@@ -97,8 +103,11 @@ impl Violation for MissingTypeArgs {
 /// ```python
 /// def foo(**kwargs: int): ...
 /// ```
-#[violation]
-pub struct MissingTypeKwargs {
+///
+/// ## Options
+/// - `lint.flake8-annotations.suppress-dummy-args`
+#[derive(ViolationMetadata)]
+pub(crate) struct MissingTypeKwargs {
     name: String,
 }
 
@@ -137,9 +146,9 @@ impl Violation for MissingTypeKwargs {
 /// class Foo:
 ///     def bar(self: "Foo"): ...
 /// ```
-#[violation]
+#[derive(ViolationMetadata)]
 #[deprecated(note = "ANN101 has been removed")]
-pub struct MissingTypeSelf;
+pub(crate) struct MissingTypeSelf;
 
 #[allow(deprecated)]
 impl Violation for MissingTypeSelf {
@@ -181,9 +190,9 @@ impl Violation for MissingTypeSelf {
 ///     @classmethod
 ///     def bar(cls: Type["Foo"]): ...
 /// ```
-#[violation]
+#[derive(ViolationMetadata)]
 #[deprecated(note = "ANN102 has been removed")]
-pub struct MissingTypeCls;
+pub(crate) struct MissingTypeCls;
 
 #[allow(deprecated)]
 impl Violation for MissingTypeCls {
@@ -215,8 +224,8 @@ impl Violation for MissingTypeCls {
 /// def add(a: int, b: int) -> int:
 ///     return a + b
 /// ```
-#[violation]
-pub struct MissingReturnTypeUndocumentedPublicFunction {
+#[derive(ViolationMetadata)]
+pub(crate) struct MissingReturnTypeUndocumentedPublicFunction {
     name: String,
     annotation: Option<String>,
 }
@@ -258,8 +267,8 @@ impl Violation for MissingReturnTypeUndocumentedPublicFunction {
 /// def _add(a: int, b: int) -> int:
 ///     return a + b
 /// ```
-#[violation]
-pub struct MissingReturnTypePrivateFunction {
+#[derive(ViolationMetadata)]
+pub(crate) struct MissingReturnTypePrivateFunction {
     name: String,
     annotation: Option<String>,
 }
@@ -314,8 +323,8 @@ impl Violation for MissingReturnTypePrivateFunction {
 ///     def __init__(self, x: int) -> None:
 ///         self.x = x
 /// ```
-#[violation]
-pub struct MissingReturnTypeSpecialMethod {
+#[derive(ViolationMetadata)]
+pub(crate) struct MissingReturnTypeSpecialMethod {
     name: String,
     annotation: Option<String>,
 }
@@ -361,8 +370,8 @@ impl Violation for MissingReturnTypeSpecialMethod {
 ///     def bar() -> int:
 ///         return 1
 /// ```
-#[violation]
-pub struct MissingReturnTypeStaticMethod {
+#[derive(ViolationMetadata)]
+pub(crate) struct MissingReturnTypeStaticMethod {
     name: String,
     annotation: Option<String>,
 }
@@ -408,8 +417,8 @@ impl Violation for MissingReturnTypeStaticMethod {
 ///     def bar(cls) -> int:
 ///         return 1
 /// ```
-#[violation]
-pub struct MissingReturnTypeClassMethod {
+#[derive(ViolationMetadata)]
+pub(crate) struct MissingReturnTypeClassMethod {
     name: String,
     annotation: Option<String>,
 }
@@ -474,8 +483,8 @@ impl Violation for MissingReturnTypeClassMethod {
 /// - [Typing spec: `Any`](https://typing.readthedocs.io/en/latest/spec/special-types.html#any)
 /// - [Python documentation: `typing.Any`](https://docs.python.org/3/library/typing.html#typing.Any)
 /// - [Mypy documentation: The Any type](https://mypy.readthedocs.io/en/stable/kinds_of_types.html#the-any-type)
-#[violation]
-pub struct AnyType {
+#[derive(ViolationMetadata)]
+pub(crate) struct AnyType {
     name: String,
 }
 
