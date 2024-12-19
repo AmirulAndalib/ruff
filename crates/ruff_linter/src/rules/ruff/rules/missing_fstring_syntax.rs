@@ -2,7 +2,7 @@ use memchr::memchr2_iter;
 use rustc_hash::FxHashSet;
 
 use ruff_diagnostics::{AlwaysFixableViolation, Diagnostic, Edit, Fix};
-use ruff_macros::{derive_message_formats, violation};
+use ruff_macros::{derive_message_formats, ViolationMetadata};
 use ruff_python_ast as ast;
 use ruff_python_literal::format::FormatSpec;
 use ruff_python_parser::parse_expression;
@@ -55,8 +55,8 @@ use crate::Locator;
 /// [logging]: https://docs.python.org/3/howto/logging-cookbook.html#using-particular-formatting-styles-throughout-your-application
 /// [gettext]: https://docs.python.org/3/library/gettext.html
 /// [fastAPI path]: https://fastapi.tiangolo.com/tutorial/path-params/
-#[violation]
-pub struct MissingFStringSyntax;
+#[derive(ViolationMetadata)]
+pub(crate) struct MissingFStringSyntax;
 
 impl AlwaysFixableViolation for MissingFStringSyntax {
     #[derive_message_formats]
@@ -209,7 +209,14 @@ fn should_be_fstring(
                     return false;
                 }
                 if semantic
-                    .lookup_symbol(id)
+                    // the parsed expression nodes have incorrect ranges
+                    // so we need to use the range of the literal for the
+                    // lookup in order to get reasonable results.
+                    .simulate_runtime_load_at_location_in_scope(
+                        id,
+                        literal.range(),
+                        semantic.scope_id,
+                    )
                     .map_or(true, |id| semantic.binding(id).kind.is_builtin())
                 {
                     return false;

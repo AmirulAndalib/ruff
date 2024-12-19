@@ -349,6 +349,8 @@ fn collect_packages(
         packages.push(package);
     }
 
+    packages.sort_unstable_by(|a, b| a.root().cmp(b.root()));
+
     Ok(CollectedPackagesOrStandalone::Packages(packages))
 }
 
@@ -692,7 +694,7 @@ mod tests {
     /// Folders that match the members pattern but don't have a pyproject.toml
     /// aren't valid members and discovery fails. However, don't fail
     /// if the folder name indicates that it is a hidden folder that might
-    /// have been crated by another tool
+    /// have been created by another tool
     #[test]
     fn member_pattern_matching_hidden_folder() -> anyhow::Result<()> {
         let system = TestSystem::default();
