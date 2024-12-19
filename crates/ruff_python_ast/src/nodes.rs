@@ -919,14 +919,14 @@ impl<'a> Iterator for DictKeyIterator<'a> {
     }
 }
 
-impl<'a> DoubleEndedIterator for DictKeyIterator<'a> {
+impl DoubleEndedIterator for DictKeyIterator<'_> {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.items.next_back().map(DictItem::key)
     }
 }
 
-impl<'a> FusedIterator for DictKeyIterator<'a> {}
-impl<'a> ExactSizeIterator for DictKeyIterator<'a> {}
+impl FusedIterator for DictKeyIterator<'_> {}
+impl ExactSizeIterator for DictKeyIterator<'_> {}
 
 #[derive(Debug, Clone)]
 pub struct DictValueIterator<'a> {
@@ -961,14 +961,14 @@ impl<'a> Iterator for DictValueIterator<'a> {
     }
 }
 
-impl<'a> DoubleEndedIterator for DictValueIterator<'a> {
+impl DoubleEndedIterator for DictValueIterator<'_> {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.items.next_back().map(DictItem::value)
     }
 }
 
-impl<'a> FusedIterator for DictValueIterator<'a> {}
-impl<'a> ExactSizeIterator for DictValueIterator<'a> {}
+impl FusedIterator for DictValueIterator<'_> {}
+impl ExactSizeIterator for DictValueIterator<'_> {}
 
 /// See also [Set](https://docs.python.org/3/library/ast.html#ast.Set)
 #[derive(Clone, Debug, PartialEq)]
@@ -1271,6 +1271,15 @@ impl FStringValue {
     /// Returns `true` if the f-string is implicitly concatenated, `false` otherwise.
     pub fn is_implicit_concatenated(&self) -> bool {
         matches!(self.inner, FStringValueInner::Concatenated(_))
+    }
+
+    /// Returns the single [`FString`] if the f-string isn't implicitly concatenated, [`None`]
+    /// otherwise.
+    pub fn as_single(&self) -> Option<&FString> {
+        match &self.inner {
+            FStringValueInner::Single(FStringPart::FString(fstring)) => Some(fstring),
+            _ => None,
+        }
     }
 
     /// Returns a slice of all the [`FStringPart`]s contained in this value.
@@ -3377,6 +3386,24 @@ pub enum TypeParam {
     TypeVarTuple(TypeParamTypeVarTuple),
 }
 
+impl TypeParam {
+    pub const fn name(&self) -> &Identifier {
+        match self {
+            Self::TypeVar(x) => &x.name,
+            Self::ParamSpec(x) => &x.name,
+            Self::TypeVarTuple(x) => &x.name,
+        }
+    }
+
+    pub fn default(&self) -> Option<&Expr> {
+        match self {
+            Self::TypeVar(x) => x.default.as_deref(),
+            Self::ParamSpec(x) => x.default.as_deref(),
+            Self::TypeVarTuple(x) => x.default.as_deref(),
+        }
+    }
+}
+
 /// See also [TypeVar](https://docs.python.org/3/library/ast.html#ast.TypeVar)
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypeParamTypeVar {
@@ -3657,7 +3684,7 @@ impl<'a> Iterator for ParametersIterator<'a> {
     }
 }
 
-impl<'a> DoubleEndedIterator for ParametersIterator<'a> {
+impl DoubleEndedIterator for ParametersIterator<'_> {
     fn next_back(&mut self) -> Option<Self::Item> {
         let ParametersIterator {
             posonlyargs,
@@ -3683,11 +3710,11 @@ impl<'a> DoubleEndedIterator for ParametersIterator<'a> {
     }
 }
 
-impl<'a> FusedIterator for ParametersIterator<'a> {}
+impl FusedIterator for ParametersIterator<'_> {}
 
 /// We rely on the same invariants outlined in the comment above `Parameters::len()`
 /// in order to implement `ExactSizeIterator` here
-impl<'a> ExactSizeIterator for ParametersIterator<'a> {}
+impl ExactSizeIterator for ParametersIterator<'_> {}
 
 impl<'a> IntoIterator for &'a Parameters {
     type IntoIter = ParametersIterator<'a>;
@@ -4052,7 +4079,7 @@ impl Ranged for Identifier {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Singleton {
     None,
     True,
