@@ -3,7 +3,7 @@ use bitflags::bitflags;
 use anyhow::Result;
 
 use ruff_diagnostics::{Applicability, Diagnostic, Edit, Fix, FixAvailability, Violation};
-use ruff_macros::{derive_message_formats, violation};
+use ruff_macros::{derive_message_formats, ViolationMetadata};
 use ruff_python_ast::{
     name::Name, AnyParameterRef, Expr, ExprBinOp, ExprContext, ExprName, ExprSubscript, ExprTuple,
     Operator, Parameters,
@@ -55,8 +55,8 @@ use crate::{checkers::ast::Checker, importer::ImportRequest};
 /// - [PEP 484: The numeric tower](https://peps.python.org/pep-0484/#the-numeric-tower)
 ///
 /// [typing specification]: https://typing.readthedocs.io/en/latest/spec/special-types.html#special-cases-for-float-and-complex
-#[violation]
-pub struct RedundantNumericUnion {
+#[derive(ViolationMetadata)]
+pub(crate) struct RedundantNumericUnion {
     redundancy: Redundancy,
 }
 
@@ -259,7 +259,7 @@ fn generate_pep604_fix(
     )
 }
 
-/// Generate a [`Fix`] for two or more type expresisons, e.g. `typing.Union[int, float, complex]`.
+/// Generate a [`Fix`] for two or more type expressions, e.g. `typing.Union[int, float, complex]`.
 fn generate_union_fix(
     checker: &Checker,
     nodes: Vec<&Expr>,

@@ -1342,7 +1342,7 @@ pub struct Flake8ImportConventionsOptions {
             "dask.dataframe" = "dd"
         "#
     )]
-    pub extend_aliases: Option<FxHashMap<String, String>>,
+    pub extend_aliases: Option<FxHashMap<ModuleName, Alias>>,
 
     /// A mapping from module to its banned import aliases.
     #[option(
@@ -1415,6 +1415,15 @@ impl<'de> Deserialize<'de> for Alias {
         D: Deserializer<'de>,
     {
         let name = String::deserialize(deserializer)?;
+        // Assigning to "__debug__" is a SyntaxError
+        // see the note here:
+        // https://docs.python.org/3/library/constants.html#debug__
+        if &*name == "__debug__" {
+            return Err(de::Error::invalid_value(
+                de::Unexpected::Str(&name),
+                &"an assignable Python identifier",
+            ));
+        }
         if is_identifier(&name) {
             Ok(Self(name))
         } else {
@@ -1436,7 +1445,11 @@ impl Flake8ImportConventionsOptions {
             None => flake8_import_conventions::settings::default_aliases(),
         };
         if let Some(extend_aliases) = self.extend_aliases {
-            aliases.extend(extend_aliases);
+            aliases.extend(
+                extend_aliases
+                    .into_iter()
+                    .map(|(module, alias)| (module.into_string(), alias.into_string())),
+            );
         }
 
         flake8_import_conventions::settings::Settings {
@@ -3066,18 +3079,49 @@ pub struct RuffOptions {
     )]
     pub parenthesize_tuple_in_subscript: Option<bool>,
 
-    /// A list of additional callable names that behave like [`markupsafe.Markup`].
+    /// A list of additional callable names that behave like
+    /// [`markupsafe.Markup`](https://markupsafe.palletsprojects.com/en/stable/escaping/#markupsafe.Markup).
     ///
     /// Expects to receive a list of fully-qualified names (e.g., `webhelpers.html.literal`, rather than
     /// `literal`).
-    ///
-    /// [markupsafe.Markup]: https://markupsafe.palletsprojects.com/en/stable/escaping/#markupsafe.Markup
     #[option(
         default = "[]",
         value_type = "list[str]",
         example = "extend-markup-names = [\"webhelpers.html.literal\", \"my_package.Markup\"]"
     )]
     pub extend_markup_names: Option<Vec<String>>,
+
+    /// A list of callable names, whose result may be safely passed into
+    /// [`markupsafe.Markup`](https://markupsafe.palletsprojects.com/en/stable/escaping/#markupsafe.Markup).
+    ///
+    /// Expects to receive a list of fully-qualified names (e.g., `bleach.clean`, rather than `clean`).
+    ///
+    /// This setting helps you avoid false positives in code like:
+    ///
+    /// ```python
+    /// from bleach import clean
+    /// from markupsafe import Markup
+    ///
+    /// cleaned_markup = Markup(clean(some_user_input))
+    /// ```
+    ///
+    /// Where the use of [`bleach.clean`](https://bleach.readthedocs.io/en/latest/clean.html)
+    /// usually ensures that there's no XSS vulnerability.
+    ///
+    /// Although it is not recommended, you may also use this setting to whitelist other
+    /// kinds of calls, e.g. calls to i18n translation functions, where how safe that is
+    /// will depend on the implementation and how well the translations are audited.
+    ///
+    /// Another common use-case is to wrap the output of functions that generate markup
+    /// like [`xml.etree.ElementTree.tostring`](https://docs.python.org/3/library/xml.etree.elementtree.html#xml.etree.ElementTree.tostring)
+    /// or template rendering engines where sanitization of potential user input is either
+    /// already baked in or has to happen before rendering.
+    #[option(
+        default = "[]",
+        value_type = "list[str]",
+        example = "allowed-markup-calls = [\"bleach.clean\", \"my_package.sanitize\"]"
+    )]
+    pub allowed_markup_calls: Option<Vec<String>>,
 }
 
 impl RuffOptions {
@@ -3087,6 +3131,7 @@ impl RuffOptions {
                 .parenthesize_tuple_in_subscript
                 .unwrap_or_default(),
             extend_markup_names: self.extend_markup_names.unwrap_or_default(),
+            allowed_markup_calls: self.allowed_markup_calls.unwrap_or_default(),
         }
     }
 }
