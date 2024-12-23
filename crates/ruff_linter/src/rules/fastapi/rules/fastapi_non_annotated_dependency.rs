@@ -1,5 +1,5 @@
 use ruff_diagnostics::{Diagnostic, Edit, Fix, FixAvailability, Violation};
-use ruff_macros::{derive_message_formats, violation};
+use ruff_macros::{derive_message_formats, ViolationMetadata};
 use ruff_python_ast as ast;
 use ruff_python_ast::helpers::map_callable;
 use ruff_python_semantic::Modules;
@@ -63,8 +63,8 @@ use crate::settings::types::PythonVersion;
 /// [fastAPI documentation]: https://fastapi.tiangolo.com/tutorial/query-params-str-validations/?h=annotated#advantages-of-annotated
 /// [typing.Annotated]: https://docs.python.org/3/library/typing.html#typing.Annotated
 /// [typing_extensions]: https://typing-extensions.readthedocs.io/en/stable/
-#[violation]
-pub struct FastApiNonAnnotatedDependency {
+#[derive(ViolationMetadata)]
+pub(crate) struct FastApiNonAnnotatedDependency {
     py_version: PythonVersion,
 }
 
@@ -99,9 +99,15 @@ pub(crate) fn fastapi_non_annotated_dependency(
 
     let mut updatable_count = 0;
     let mut has_non_updatable_default = false;
-    let total_params = function_def.parameters.args.len();
+    let total_params =
+        function_def.parameters.args.len() + function_def.parameters.kwonlyargs.len();
 
-    for parameter in &function_def.parameters.args {
+    for parameter in function_def
+        .parameters
+        .args
+        .iter()
+        .chain(&function_def.parameters.kwonlyargs)
+    {
         let needs_update = matches!(
             (&parameter.parameter.annotation, &parameter.default),
             (Some(_annotation), Some(default)) if is_fastapi_dependency(checker, default)

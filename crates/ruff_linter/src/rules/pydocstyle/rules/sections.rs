@@ -5,7 +5,7 @@ use std::sync::LazyLock;
 
 use ruff_diagnostics::{AlwaysFixableViolation, Violation};
 use ruff_diagnostics::{Diagnostic, Edit, Fix};
-use ruff_macros::{derive_message_formats, violation};
+use ruff_macros::{derive_message_formats, ViolationMetadata};
 use ruff_python_ast::docstrings::{clean_space, leading_space};
 use ruff_python_ast::identifier::Identifier;
 use ruff_python_ast::ParameterWithDefault;
@@ -89,20 +89,20 @@ use crate::rules::pydocstyle::settings::Convention;
 /// - [PEP 287 – reStructuredText Docstring Format](https://peps.python.org/pep-0287/)
 /// - [NumPy Style Guide](https://numpydoc.readthedocs.io/en/latest/format.html)
 /// - [Google Python Style Guide - Docstrings](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings)
-#[violation]
-pub struct SectionNotOverIndented {
+#[derive(ViolationMetadata)]
+pub(crate) struct OverindentedSection {
     name: String,
 }
 
-impl AlwaysFixableViolation for SectionNotOverIndented {
+impl AlwaysFixableViolation for OverindentedSection {
     #[derive_message_formats]
     fn message(&self) -> String {
-        let SectionNotOverIndented { name } = self;
+        let OverindentedSection { name } = self;
         format!("Section is over-indented (\"{name}\")")
     }
 
     fn fix_title(&self) -> String {
-        let SectionNotOverIndented { name } = self;
+        let OverindentedSection { name } = self;
         format!("Remove over-indentation from \"{name}\"")
     }
 }
@@ -192,20 +192,20 @@ impl AlwaysFixableViolation for SectionNotOverIndented {
 /// - [PEP 257 – Docstring Conventions](https://peps.python.org/pep-0257/)
 /// - [PEP 287 – reStructuredText Docstring Format](https://peps.python.org/pep-0287/)
 /// - [NumPy Style Guide](https://numpydoc.readthedocs.io/en/latest/format.html)
-#[violation]
-pub struct SectionUnderlineNotOverIndented {
+#[derive(ViolationMetadata)]
+pub(crate) struct OverindentedSectionUnderline {
     name: String,
 }
 
-impl AlwaysFixableViolation for SectionUnderlineNotOverIndented {
+impl AlwaysFixableViolation for OverindentedSectionUnderline {
     #[derive_message_formats]
     fn message(&self) -> String {
-        let SectionUnderlineNotOverIndented { name } = self;
+        let OverindentedSectionUnderline { name } = self;
         format!("Section underline is over-indented (\"{name}\")")
     }
 
     fn fix_title(&self) -> String {
-        let SectionUnderlineNotOverIndented { name } = self;
+        let OverindentedSectionUnderline { name } = self;
         format!("Remove over-indentation from \"{name}\" underline")
     }
 }
@@ -275,20 +275,20 @@ impl AlwaysFixableViolation for SectionUnderlineNotOverIndented {
 /// - [PEP 287 – reStructuredText Docstring Format](https://peps.python.org/pep-0287/)
 /// - [NumPy Style Guide](https://numpydoc.readthedocs.io/en/latest/format.html)
 /// - [Google Python Style Guide - Docstrings](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings)
-#[violation]
-pub struct CapitalizeSectionName {
+#[derive(ViolationMetadata)]
+pub(crate) struct NonCapitalizedSectionName {
     name: String,
 }
 
-impl AlwaysFixableViolation for CapitalizeSectionName {
+impl AlwaysFixableViolation for NonCapitalizedSectionName {
     #[derive_message_formats]
     fn message(&self) -> String {
-        let CapitalizeSectionName { name } = self;
+        let NonCapitalizedSectionName { name } = self;
         format!("Section name should be properly capitalized (\"{name}\")")
     }
 
     fn fix_title(&self) -> String {
-        let CapitalizeSectionName { name } = self;
+        let NonCapitalizedSectionName { name } = self;
         format!("Capitalize \"{name}\"")
     }
 }
@@ -373,20 +373,20 @@ impl AlwaysFixableViolation for CapitalizeSectionName {
 /// - [PEP 257 – Docstring Conventions](https://peps.python.org/pep-0257/)
 /// - [PEP 287 – reStructuredText Docstring Format](https://peps.python.org/pep-0287/)
 /// - [NumPy Style Guide](https://numpydoc.readthedocs.io/en/latest/format.html)
-#[violation]
-pub struct NewLineAfterSectionName {
+#[derive(ViolationMetadata)]
+pub(crate) struct MissingNewLineAfterSectionName {
     name: String,
 }
 
-impl AlwaysFixableViolation for NewLineAfterSectionName {
+impl AlwaysFixableViolation for MissingNewLineAfterSectionName {
     #[derive_message_formats]
     fn message(&self) -> String {
-        let NewLineAfterSectionName { name } = self;
+        let MissingNewLineAfterSectionName { name } = self;
         format!("Section name should end with a newline (\"{name}\")")
     }
 
     fn fix_title(&self) -> String {
-        let NewLineAfterSectionName { name } = self;
+        let MissingNewLineAfterSectionName { name } = self;
         format!("Add newline after \"{name}\"")
     }
 }
@@ -476,20 +476,20 @@ impl AlwaysFixableViolation for NewLineAfterSectionName {
 /// - [PEP 257 – Docstring Conventions](https://peps.python.org/pep-0257/)
 /// - [PEP 287 – reStructuredText Docstring Format](https://peps.python.org/pep-0287/)
 /// - [NumPy Style Guide](https://numpydoc.readthedocs.io/en/latest/format.html)
-#[violation]
-pub struct DashedUnderlineAfterSection {
+#[derive(ViolationMetadata)]
+pub(crate) struct MissingDashedUnderlineAfterSection {
     name: String,
 }
 
-impl AlwaysFixableViolation for DashedUnderlineAfterSection {
+impl AlwaysFixableViolation for MissingDashedUnderlineAfterSection {
     #[derive_message_formats]
     fn message(&self) -> String {
-        let DashedUnderlineAfterSection { name } = self;
+        let MissingDashedUnderlineAfterSection { name } = self;
         format!("Missing dashed underline after section (\"{name}\")")
     }
 
     fn fix_title(&self) -> String {
-        let DashedUnderlineAfterSection { name } = self;
+        let MissingDashedUnderlineAfterSection { name } = self;
         format!("Add dashed line under \"{name}\"")
     }
 }
@@ -582,20 +582,20 @@ impl AlwaysFixableViolation for DashedUnderlineAfterSection {
 /// - [PEP 257 – Docstring Conventions](https://peps.python.org/pep-0257/)
 /// - [PEP 287 – reStructuredText Docstring Format](https://peps.python.org/pep-0287/)
 /// - [NumPy Style Guide](https://numpydoc.readthedocs.io/en/latest/format.html)
-#[violation]
-pub struct SectionUnderlineAfterName {
+#[derive(ViolationMetadata)]
+pub(crate) struct MissingSectionUnderlineAfterName {
     name: String,
 }
 
-impl AlwaysFixableViolation for SectionUnderlineAfterName {
+impl AlwaysFixableViolation for MissingSectionUnderlineAfterName {
     #[derive_message_formats]
     fn message(&self) -> String {
-        let SectionUnderlineAfterName { name } = self;
+        let MissingSectionUnderlineAfterName { name } = self;
         format!("Section underline should be in the line following the section's name (\"{name}\")")
     }
 
     fn fix_title(&self) -> String {
-        let SectionUnderlineAfterName { name } = self;
+        let MissingSectionUnderlineAfterName { name } = self;
         format!("Add underline to \"{name}\"")
     }
 }
@@ -686,20 +686,20 @@ impl AlwaysFixableViolation for SectionUnderlineAfterName {
 /// - [PEP 257 – Docstring Conventions](https://peps.python.org/pep-0257/)
 /// - [PEP 287 – reStructuredText Docstring Format](https://peps.python.org/pep-0287/)
 /// - [NumPy Style Guide](https://numpydoc.readthedocs.io/en/latest/format.html)
-#[violation]
-pub struct SectionUnderlineMatchesSectionLength {
+#[derive(ViolationMetadata)]
+pub(crate) struct MismatchedSectionUnderlineLength {
     name: String,
 }
 
-impl AlwaysFixableViolation for SectionUnderlineMatchesSectionLength {
+impl AlwaysFixableViolation for MismatchedSectionUnderlineLength {
     #[derive_message_formats]
     fn message(&self) -> String {
-        let SectionUnderlineMatchesSectionLength { name } = self;
+        let MismatchedSectionUnderlineLength { name } = self;
         format!("Section underline should match the length of its name (\"{name}\")")
     }
 
     fn fix_title(&self) -> String {
-        let SectionUnderlineMatchesSectionLength { name } = self;
+        let MismatchedSectionUnderlineLength { name } = self;
         format!("Adjust underline length to match \"{name}\"")
     }
 }
@@ -783,8 +783,8 @@ impl AlwaysFixableViolation for SectionUnderlineMatchesSectionLength {
 /// - [PEP 287 – reStructuredText Docstring Format](https://peps.python.org/pep-0287/)
 /// - [NumPy Style Guide](https://numpydoc.readthedocs.io/en/latest/format.html)
 /// - [Google Style Guide](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings)
-#[violation]
-pub struct NoBlankLineAfterSection {
+#[derive(ViolationMetadata)]
+pub(crate) struct NoBlankLineAfterSection {
     name: String,
 }
 
@@ -876,8 +876,8 @@ impl AlwaysFixableViolation for NoBlankLineAfterSection {
 /// - [PEP 257 – Docstring Conventions](https://peps.python.org/pep-0257/)
 /// - [PEP 287 – reStructuredText Docstring Format](https://peps.python.org/pep-0287/)
 /// - [NumPy Style Guide](https://numpydoc.readthedocs.io/en/latest/format.html)
-#[violation]
-pub struct NoBlankLineBeforeSection {
+#[derive(ViolationMetadata)]
+pub(crate) struct NoBlankLineBeforeSection {
     name: String,
 }
 
@@ -971,20 +971,20 @@ impl AlwaysFixableViolation for NoBlankLineBeforeSection {
 /// - [PEP 257 – Docstring Conventions](https://peps.python.org/pep-0257/)
 /// - [PEP 287 – reStructuredText Docstring Format](https://peps.python.org/pep-0287/)
 /// - [NumPy Style Guide](https://numpydoc.readthedocs.io/en/latest/format.html)
-#[violation]
-pub struct BlankLineAfterLastSection {
+#[derive(ViolationMetadata)]
+pub(crate) struct MissingBlankLineAfterLastSection {
     name: String,
 }
 
-impl AlwaysFixableViolation for BlankLineAfterLastSection {
+impl AlwaysFixableViolation for MissingBlankLineAfterLastSection {
     #[derive_message_formats]
     fn message(&self) -> String {
-        let BlankLineAfterLastSection { name } = self;
+        let MissingBlankLineAfterLastSection { name } = self;
         format!("Missing blank line after last section (\"{name}\")")
     }
 
     fn fix_title(&self) -> String {
-        let BlankLineAfterLastSection { name } = self;
+        let MissingBlankLineAfterLastSection { name } = self;
         format!("Add blank line after \"{name}\"")
     }
 }
@@ -1060,8 +1060,8 @@ impl AlwaysFixableViolation for BlankLineAfterLastSection {
 /// - [PEP 287 – reStructuredText Docstring Format](https://peps.python.org/pep-0287/)
 /// - [NumPy Style Guide](https://numpydoc.readthedocs.io/en/latest/format.html)
 /// - [Google Style Guide](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings)
-#[violation]
-pub struct EmptyDocstringSection {
+#[derive(ViolationMetadata)]
+pub(crate) struct EmptyDocstringSection {
     name: String,
 }
 
@@ -1137,20 +1137,20 @@ impl Violation for EmptyDocstringSection {
 /// - [PEP 257 – Docstring Conventions](https://peps.python.org/pep-0257/)
 /// - [PEP 287 – reStructuredText Docstring Format](https://peps.python.org/pep-0287/)
 /// - [Google Style Guide](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings)
-#[violation]
-pub struct SectionNameEndsInColon {
+#[derive(ViolationMetadata)]
+pub(crate) struct MissingSectionNameColon {
     name: String,
 }
 
-impl AlwaysFixableViolation for SectionNameEndsInColon {
+impl AlwaysFixableViolation for MissingSectionNameColon {
     #[derive_message_formats]
     fn message(&self) -> String {
-        let SectionNameEndsInColon { name } = self;
+        let MissingSectionNameColon { name } = self;
         format!("Section name should end with a colon (\"{name}\")")
     }
 
     fn fix_title(&self) -> String {
-        let SectionNameEndsInColon { name } = self;
+        let MissingSectionNameColon { name } = self;
         format!("Add colon to \"{name}\"")
     }
 }
@@ -1220,8 +1220,8 @@ impl AlwaysFixableViolation for SectionNameEndsInColon {
 /// - [PEP 257 – Docstring Conventions](https://peps.python.org/pep-0257/)
 /// - [PEP 287 – reStructuredText Docstring Format](https://peps.python.org/pep-0287/)
 /// - [Google Python Style Guide - Docstrings](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings)
-#[violation]
-pub struct UndocumentedParam {
+#[derive(ViolationMetadata)]
+pub(crate) struct UndocumentedParam {
     /// The name of the function being documented.
     definition: String,
     /// The names of the undocumented parameters.
@@ -1302,8 +1302,8 @@ impl Violation for UndocumentedParam {
 /// - [PEP 287 – reStructuredText Docstring Format](https://peps.python.org/pep-0287/)
 /// - [NumPy Style Guide](https://numpydoc.readthedocs.io/en/latest/format.html)
 /// - [Google Python Style Guide - Docstrings](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings)
-#[violation]
-pub struct BlankLinesBetweenHeaderAndContent {
+#[derive(ViolationMetadata)]
+pub(crate) struct BlankLinesBetweenHeaderAndContent {
     name: String,
 }
 
@@ -1360,9 +1360,9 @@ fn blanks_and_section_underline(
     if let Some(non_blank_line) = following_lines.next() {
         if let Some(dashed_line) = find_underline(&non_blank_line, '-') {
             if num_blank_lines_after_header > 0 {
-                if checker.enabled(Rule::SectionUnderlineAfterName) {
+                if checker.enabled(Rule::MissingSectionUnderlineAfterName) {
                     let mut diagnostic = Diagnostic::new(
-                        SectionUnderlineAfterName {
+                        MissingSectionUnderlineAfterName {
                             name: context.section_name().to_string(),
                         },
                         dashed_line,
@@ -1379,9 +1379,9 @@ fn blanks_and_section_underline(
             }
 
             if dashed_line.len().to_usize() != context.section_name().len() {
-                if checker.enabled(Rule::SectionUnderlineMatchesSectionLength) {
+                if checker.enabled(Rule::MismatchedSectionUnderlineLength) {
                     let mut diagnostic = Diagnostic::new(
-                        SectionUnderlineMatchesSectionLength {
+                        MismatchedSectionUnderlineLength {
                             name: context.section_name().to_string(),
                         },
                         dashed_line,
@@ -1397,11 +1397,11 @@ fn blanks_and_section_underline(
                 }
             }
 
-            if checker.enabled(Rule::SectionUnderlineNotOverIndented) {
+            if checker.enabled(Rule::OverindentedSectionUnderline) {
                 let leading_space = leading_space(&non_blank_line);
                 if leading_space.len() > docstring.indentation.len() {
                     let mut diagnostic = Diagnostic::new(
-                        SectionUnderlineNotOverIndented {
+                        OverindentedSectionUnderline {
                             name: context.section_name().to_string(),
                         },
                         dashed_line,
@@ -1511,10 +1511,10 @@ fn blanks_and_section_underline(
                 }
             }
         } else {
-            if style.is_numpy() && checker.enabled(Rule::DashedUnderlineAfterSection) {
+            if style.is_numpy() && checker.enabled(Rule::MissingDashedUnderlineAfterSection) {
                 if let Some(equal_line) = find_underline(&non_blank_line, '=') {
                     let mut diagnostic = Diagnostic::new(
-                        DashedUnderlineAfterSection {
+                        MissingDashedUnderlineAfterSection {
                             name: context.section_name().to_string(),
                         },
                         equal_line,
@@ -1530,7 +1530,7 @@ fn blanks_and_section_underline(
                     checker.diagnostics.push(diagnostic);
                 } else {
                     let mut diagnostic = Diagnostic::new(
-                        DashedUnderlineAfterSection {
+                        MissingDashedUnderlineAfterSection {
                             name: context.section_name().to_string(),
                         },
                         context.section_name_range(),
@@ -1609,9 +1609,9 @@ fn blanks_and_section_underline(
         }
     } else {
         // Nothing but blank lines after the section header.
-        if style.is_numpy() && checker.enabled(Rule::DashedUnderlineAfterSection) {
+        if style.is_numpy() && checker.enabled(Rule::MissingDashedUnderlineAfterSection) {
             let mut diagnostic = Diagnostic::new(
-                DashedUnderlineAfterSection {
+                MissingDashedUnderlineAfterSection {
                     name: context.section_name().to_string(),
                 },
                 context.section_name_range(),
@@ -1649,12 +1649,12 @@ fn common_section(
     next: Option<&SectionContext>,
     style: SectionStyle,
 ) {
-    if checker.enabled(Rule::CapitalizeSectionName) {
+    if checker.enabled(Rule::NonCapitalizedSectionName) {
         let capitalized_section_name = context.kind().as_str();
         if context.section_name() != capitalized_section_name {
             let section_range = context.section_name_range();
             let mut diagnostic = Diagnostic::new(
-                CapitalizeSectionName {
+                NonCapitalizedSectionName {
                     name: context.section_name().to_string(),
                 },
                 section_range,
@@ -1669,12 +1669,12 @@ fn common_section(
         }
     }
 
-    if checker.enabled(Rule::SectionNotOverIndented) {
+    if checker.enabled(Rule::OverindentedSection) {
         let leading_space = leading_space(context.summary_line());
         if leading_space.len() > docstring.indentation.len() {
             let section_range = context.section_name_range();
             let mut diagnostic = Diagnostic::new(
-                SectionNotOverIndented {
+                OverindentedSection {
                     name: context.section_name().to_string(),
                 },
                 section_range,
@@ -1720,7 +1720,7 @@ fn common_section(
     } else {
         // The first blank line is the line containing the closing triple quotes, so we need at
         // least two.
-        if checker.enabled(Rule::BlankLineAfterLastSection) {
+        if checker.enabled(Rule::MissingBlankLineAfterLastSection) {
             let num_blank_lines = context
                 .following_lines()
                 .rev()
@@ -1746,7 +1746,7 @@ fn common_section(
 
                 let section_range = context.section_name_range();
                 let mut diagnostic = Diagnostic::new(
-                    BlankLineAfterLastSection {
+                    MissingBlankLineAfterLastSection {
                         name: context.section_name().to_string(),
                     },
                     section_range,
@@ -1950,12 +1950,12 @@ fn numpy_section(
 ) {
     common_section(checker, docstring, context, next, SectionStyle::Numpy);
 
-    if checker.enabled(Rule::NewLineAfterSectionName) {
+    if checker.enabled(Rule::MissingNewLineAfterSectionName) {
         let suffix = context.summary_after_section_name();
 
         if !suffix.is_empty() {
             let mut diagnostic = Diagnostic::new(
-                NewLineAfterSectionName {
+                MissingNewLineAfterSectionName {
                     name: context.section_name().to_string(),
                 },
                 context.section_name_range(),
@@ -1985,11 +1985,11 @@ fn google_section(
 ) {
     common_section(checker, docstring, context, next, SectionStyle::Google);
 
-    if checker.enabled(Rule::SectionNameEndsInColon) {
+    if checker.enabled(Rule::MissingSectionNameColon) {
         let suffix = context.summary_after_section_name();
         if suffix != ":" {
             let mut diagnostic = Diagnostic::new(
-                SectionNameEndsInColon {
+                MissingSectionNameColon {
                     name: context.section_name().to_string(),
                 },
                 context.section_name_range(),

@@ -42,7 +42,6 @@ fn parser_no_panic() -> anyhow::Result<()> {
 }
 
 #[test]
-#[ignore = "Enable running once there are fewer failures"]
 fn linter_af_no_panic() -> anyhow::Result<()> {
     let workspace_root = get_workspace_root()?;
     run_corpus_tests(&format!(
@@ -51,7 +50,6 @@ fn linter_af_no_panic() -> anyhow::Result<()> {
 }
 
 #[test]
-#[ignore = "Enable running once there are fewer failures"]
 fn linter_gz_no_panic() -> anyhow::Result<()> {
     let workspace_root = get_workspace_root()?;
     run_corpus_tests(&format!(
@@ -184,11 +182,11 @@ impl<'db> PullTypesVisitor<'db> {
         }
     }
 
-    fn visit_assign_target(&mut self, target: &Expr) {
+    fn visit_target(&mut self, target: &Expr) {
         match target {
             Expr::List(ast::ExprList { elts, .. }) | Expr::Tuple(ast::ExprTuple { elts, .. }) => {
                 for element in elts {
-                    self.visit_assign_target(element);
+                    self.visit_target(element);
                 }
             }
             _ => self.visit_expr(target),
@@ -207,8 +205,16 @@ impl SourceOrderVisitor<'_> for PullTypesVisitor<'_> {
             }
             Stmt::Assign(assign) => {
                 for target in &assign.targets {
-                    self.visit_assign_target(target);
+                    self.visit_target(target);
                 }
+                self.visit_expr(&assign.value);
+                return;
+            }
+            Stmt::For(for_stmt) => {
+                self.visit_target(&for_stmt.target);
+                self.visit_expr(&for_stmt.iter);
+                self.visit_body(&for_stmt.body);
+                self.visit_body(&for_stmt.orelse);
                 return;
             }
             Stmt::AnnAssign(_)
@@ -216,7 +222,6 @@ impl SourceOrderVisitor<'_> for PullTypesVisitor<'_> {
             | Stmt::Delete(_)
             | Stmt::AugAssign(_)
             | Stmt::TypeAlias(_)
-            | Stmt::For(_)
             | Stmt::While(_)
             | Stmt::If(_)
             | Stmt::With(_)
@@ -272,8 +277,8 @@ const KNOWN_FAILURES: &[(&str, bool, bool)] = &[
     ("crates/ruff_linter/resources/test/fixtures/pyupgrade/UP039.py", true, false),
     // related to circular references in type aliases (salsa cycle panic):
     ("crates/ruff_python_parser/resources/inline/err/type_alias_invalid_value_expr.py", true, true),
-    // related to string annotations (https://github.com/astral-sh/ruff/issues/14440)
+    ("crates/ruff_linter/resources/test/fixtures/flake8_type_checking/TC008.py", true, true),
+    // related to circular references in f-string annotations (invalid syntax)
     ("crates/ruff_linter/resources/test/fixtures/pyflakes/F821_15.py", true, true),
     ("crates/ruff_linter/resources/test/fixtures/pyflakes/F821_14.py", false, true),
-    ("crates/ruff_linter/resources/test/fixtures/pyflakes/F632.py", true, true),
 ];

@@ -35,7 +35,7 @@ impl Boundness {
 /// possibly_unbound:  Symbol::Type(Type::IntLiteral(2), Boundness::PossiblyUnbound),
 /// non_existent:      Symbol::Unbound,
 /// ```
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Symbol<'db> {
     Type(Type<'db>, Boundness),
     Unbound,
@@ -90,7 +90,7 @@ impl<'db> Symbol<'db> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::tests::setup_db;
+    use crate::db::tests::setup_db;
 
     #[test]
     fn test_symbol_or_fall_back_to() {
