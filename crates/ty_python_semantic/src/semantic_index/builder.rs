@@ -5,7 +5,7 @@ use except_handlers::TryNodeContextStackManager;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use ruff_db::files::File;
-use ruff_db::parsed::ParsedModule;
+use ruff_db::parsed::ParsedModuleRef;
 use ruff_db::source::{SourceText, source_text};
 use ruff_index::IndexVec;
 use ruff_python_ast::name::Name;
@@ -69,20 +69,20 @@ struct ScopeInfo {
     current_loop: Option<Loop>,
 }
 
-pub(super) struct SemanticIndexBuilder<'db> {
+pub(super) struct SemanticIndexBuilder<'db, 'ast> {
     // Builder state
     db: &'db dyn Db,
     file: File,
     source_type: PySourceType,
-    module: &'db ParsedModule,
+    module: &'ast ParsedModuleRef,
     scope_stack: Vec<ScopeInfo>,
     /// The assignments we're currently visiting, with
     /// the most recent visit at the end of the Vec
-    current_assignments: Vec<CurrentAssignment<'db>>,
+    current_assignments: Vec<CurrentAssignment<'ast, 'db>>,
     /// The match case we're currently visiting.
-    current_match_case: Option<CurrentMatchCase<'db>>,
+    current_match_case: Option<CurrentMatchCase<'ast>>,
     /// The name of the first function parameter of the innermost function that we're currently visiting.
-    current_first_parameter_name: Option<&'db str>,
+    current_first_parameter_name: Option<&'ast str>,
 
     /// Per-scope contexts regarding nested `try`/`except` statements
     try_node_context_stack_manager: TryNodeContextStackManager,
@@ -116,13 +116,13 @@ pub(super) struct SemanticIndexBuilder<'db> {
     semantic_syntax_errors: RefCell<Vec<SemanticSyntaxError>>,
 }
 
-impl<'db> SemanticIndexBuilder<'db> {
-    pub(super) fn new(db: &'db dyn Db, file: File, parsed: &'db ParsedModule) -> Self {
+impl<'db, 'ast> SemanticIndexBuilder<'db, 'ast> {
+    pub(super) fn new(db: &'db dyn Db, file: File, module_ref: &'ast ParsedModuleRef) -> Self {
         let mut builder = Self {
             db,
             file,
             source_type: file.source_type(db.upcast()),
-            module: parsed,
+            module: module_ref,
             scope_stack: Vec::new(),
             current_assignments: vec![],
             current_match_case: None,
@@ -241,9 +241,8 @@ impl<'db> SemanticIndexBuilder<'db> {
     ) {
         let children_start = self.scopes.next_index() + 1;
 
-        // SAFETY: `node` is guaranteed to be a child of `self.module`
-        #[expect(unsafe_code)]
-        let node_with_kind = unsafe { node.to_kind(self.module.clone()) };
+        // Note `node` is guaranteed to be a child of `self.module`
+        let node_with_kind = node.to_kind(self.module);
 
         let scope = Scope::new(
             parent,
@@ -423,7 +422,7 @@ impl<'db> SemanticIndexBuilder<'db> {
     fn add_definition(
         &mut self,
         place: ScopedPlaceId,
-        definition_node: impl Into<DefinitionNodeRef<'db>> + std::fmt::Debug + Copy,
+        definition_node: impl Into<DefinitionNodeRef<'ast, 'db>> + std::fmt::Debug + Copy,
     ) -> Definition<'db> {
         let (definition, num_definitions) = self.push_additional_definition(place, definition_node);
         debug_assert_eq!(
@@ -449,6 +448,12 @@ impl<'db> SemanticIndexBuilder<'db> {
         }
     }
 
+    fn delete_binding(&mut self, place: ScopedPlaceId) {
+        let is_place_name = self.current_place_table().place_expr(place).is_name();
+        self.current_use_def_map_mut()
+            .delete_binding(place, is_place_name);
+    }
+
     /// Push a new [`Definition`] onto the list of definitions
     /// associated with the `definition_node` AST node.
     ///
@@ -463,16 +468,17 @@ impl<'db> SemanticIndexBuilder<'db> {
     fn push_additional_definition(
         &mut self,
         place: ScopedPlaceId,
-        definition_node: impl Into<DefinitionNodeRef<'db>>,
+        definition_node: impl Into<DefinitionNodeRef<'ast, 'db>>,
     ) -> (Definition<'db>, usize) {
-        let definition_node: DefinitionNodeRef<'_> = definition_node.into();
-        #[expect(unsafe_code)]
-        // SAFETY: `definition_node` is guaranteed to be a child of `self.module`
-        let kind = unsafe { definition_node.into_owned(self.module.clone()) };
-        let category = kind.category(self.source_type.is_stub());
+        let definition_node: DefinitionNodeRef<'ast, 'db> = definition_node.into();
+
+        // Note `definition_node` is guaranteed to be a child of `self.module`
+        let kind = definition_node.into_owned(self.module);
+
+        let category = kind.category(self.source_type.is_stub(), self.module);
         let is_reexported = kind.is_reexported();
 
-        let definition = Definition::new(
+        let definition: Definition<'db> = Definition::new(
             self.db,
             self.file,
             self.current_scope(),
@@ -658,7 +664,7 @@ impl<'db> SemanticIndexBuilder<'db> {
             .record_reachability_constraint(negated_constraint);
     }
 
-    fn push_assignment(&mut self, assignment: CurrentAssignment<'db>) {
+    fn push_assignment(&mut self, assignment: CurrentAssignment<'ast, 'db>) {
         self.current_assignments.push(assignment);
     }
 
@@ -667,11 +673,11 @@ impl<'db> SemanticIndexBuilder<'db> {
         debug_assert!(popped_assignment.is_some());
     }
 
-    fn current_assignment(&self) -> Option<CurrentAssignment<'db>> {
+    fn current_assignment(&self) -> Option<CurrentAssignment<'ast, 'db>> {
         self.current_assignments.last().copied()
     }
 
-    fn current_assignment_mut(&mut self) -> Option<&mut CurrentAssignment<'db>> {
+    fn current_assignment_mut(&mut self) -> Option<&mut CurrentAssignment<'ast, 'db>> {
         self.current_assignments.last_mut()
     }
 
@@ -774,13 +780,8 @@ impl<'db> SemanticIndexBuilder<'db> {
             self.db,
             self.file,
             self.current_scope(),
-            #[expect(unsafe_code)]
-            unsafe {
-                AstNodeRef::new(self.module.clone(), expression_node)
-            },
-            #[expect(unsafe_code)]
-            assigned_to
-                .map(|assigned_to| unsafe { AstNodeRef::new(self.module.clone(), assigned_to) }),
+            AstNodeRef::new(self.module, expression_node),
+            assigned_to.map(|assigned_to| AstNodeRef::new(self.module, assigned_to)),
             expression_kind,
             countme::Count::default(),
         );
@@ -792,7 +793,7 @@ impl<'db> SemanticIndexBuilder<'db> {
     fn with_type_params(
         &mut self,
         with_scope: NodeWithScopeRef,
-        type_params: Option<&'db ast::TypeParams>,
+        type_params: Option<&'ast ast::TypeParams>,
         nested: impl FnOnce(&mut Self) -> FileScopeId,
     ) -> FileScopeId {
         if let Some(type_params) = type_params {
@@ -802,6 +803,7 @@ impl<'db> SemanticIndexBuilder<'db> {
                 let (name, bound, default) = match type_param {
                     ast::TypeParam::TypeVar(ast::TypeParamTypeVar {
                         range: _,
+                        node_index: _,
                         name,
                         bound,
                         default,
@@ -858,7 +860,7 @@ impl<'db> SemanticIndexBuilder<'db> {
     fn with_generators_scope(
         &mut self,
         scope: NodeWithScopeRef,
-        generators: &'db [ast::Comprehension],
+        generators: &'ast [ast::Comprehension],
         visit_outer_elt: impl FnOnce(&mut Self),
     ) {
         let mut generators_iter = generators.iter();
@@ -908,7 +910,7 @@ impl<'db> SemanticIndexBuilder<'db> {
         self.pop_scope();
     }
 
-    fn declare_parameters(&mut self, parameters: &'db ast::Parameters) {
+    fn declare_parameters(&mut self, parameters: &'ast ast::Parameters) {
         for parameter in parameters.iter_non_variadic_params() {
             self.declare_parameter(parameter);
         }
@@ -925,7 +927,7 @@ impl<'db> SemanticIndexBuilder<'db> {
         }
     }
 
-    fn declare_parameter(&mut self, parameter: &'db ast::ParameterWithDefault) {
+    fn declare_parameter(&mut self, parameter: &'ast ast::ParameterWithDefault) {
         let symbol = self.add_symbol(parameter.name().id().clone());
 
         let definition = self.add_definition(symbol, parameter);
@@ -946,8 +948,8 @@ impl<'db> SemanticIndexBuilder<'db> {
     /// for statements, etc.
     fn add_unpackable_assignment(
         &mut self,
-        unpackable: &Unpackable<'db>,
-        target: &'db ast::Expr,
+        unpackable: &Unpackable<'ast>,
+        target: &'ast ast::Expr,
         value: Expression<'db>,
     ) {
         // We only handle assignments to names and unpackings here, other targets like
@@ -981,11 +983,8 @@ impl<'db> SemanticIndexBuilder<'db> {
                     self.file,
                     value_file_scope,
                     self.current_scope(),
-                    // SAFETY: `target` belongs to the `self.module` tree
-                    #[expect(unsafe_code)]
-                    unsafe {
-                        AstNodeRef::new(self.module.clone(), target)
-                    },
+                    // Note `target` belongs to the `self.module` tree
+                    AstNodeRef::new(self.module, target),
                     UnpackValue::new(unpackable.kind(), value),
                     countme::Count::default(),
                 ));
@@ -1010,8 +1009,7 @@ impl<'db> SemanticIndexBuilder<'db> {
     }
 
     pub(super) fn build(mut self) -> SemanticIndex<'db> {
-        let module = self.module;
-        self.visit_body(module.suite());
+        self.visit_body(self.module.suite());
 
         // Pop the root scope
         self.pop_scope();
@@ -1081,10 +1079,7 @@ impl<'db> SemanticIndexBuilder<'db> {
     }
 }
 
-impl<'db, 'ast> Visitor<'ast> for SemanticIndexBuilder<'db>
-where
-    'ast: 'db,
-{
+impl<'ast> Visitor<'ast> for SemanticIndexBuilder<'_, 'ast> {
     fn visit_stmt(&mut self, stmt: &'ast ast::Stmt) {
         self.with_semantic_checker(|semantic, context| semantic.visit_stmt(stmt, context));
 
@@ -1099,6 +1094,7 @@ where
                     body,
                     is_async: _,
                     range: _,
+                    node_index: _,
                 } = function_def;
                 for decorator in decorator_list {
                     self.visit_decorator(decorator);
@@ -1373,6 +1369,7 @@ where
                 test,
                 msg,
                 range: _,
+                node_index: _,
             }) => {
                 // We model an `assert test, msg` statement here. Conceptually, we can think of
                 // this as being equivalent to the following:
@@ -1443,6 +1440,7 @@ where
             ast::Stmt::AugAssign(
                 aug_assign @ ast::StmtAugAssign {
                     range: _,
+                    node_index: _,
                     target,
                     op,
                     value,
@@ -1549,6 +1547,7 @@ where
                 body,
                 orelse,
                 range: _,
+                node_index: _,
             }) => {
                 self.visit_expr(test);
 
@@ -1616,6 +1615,7 @@ where
             }) => {
                 for item @ ast::WithItem {
                     range: _,
+                    node_index: _,
                     context_expr,
                     optional_vars,
                 } in items
@@ -1639,6 +1639,7 @@ where
             ast::Stmt::For(
                 for_stmt @ ast::StmtFor {
                     range: _,
+                    node_index: _,
                     is_async: _,
                     target,
                     iter,
@@ -1676,6 +1677,7 @@ where
                 subject,
                 cases,
                 range: _,
+                node_index: _,
             }) => {
                 debug_assert_eq!(self.current_match_case, None);
 
@@ -1763,6 +1765,7 @@ where
                 finalbody,
                 is_star,
                 range: _,
+                node_index: _,
             }) => {
                 self.record_ambiguous_visibility();
 
@@ -1810,6 +1813,7 @@ where
                             type_: handled_exceptions,
                             body: handler_body,
                             range: _,
+                            node_index: _,
                         } = except_handler;
 
                         if let Some(handled_exceptions) = handled_exceptions {
@@ -1819,7 +1823,7 @@ where
                         // If `handled_exceptions` above was `None`, it's something like `except as e:`,
                         // which is invalid syntax. However, it's still pretty obvious here that the user
                         // *wanted* `e` to be bound, so we should still create a definition here nonetheless.
-                        if let Some(symbol_name) = symbol_name {
+                        let symbol = if let Some(symbol_name) = symbol_name {
                             let symbol = self.add_symbol(symbol_name.id.clone());
 
                             self.add_definition(
@@ -1829,9 +1833,16 @@ where
                                     is_star: *is_star,
                                 }),
                             );
-                        }
+                            Some(symbol)
+                        } else {
+                            None
+                        };
 
                         self.visit_body(handler_body);
+                        // The caught exception is cleared at the end of the except clause
+                        if let Some(symbol) = symbol {
+                            self.delete_binding(symbol);
+                        }
                         // Each `except` block is mutually exclusive with all other `except` blocks.
                         post_except_states.push(self.flow_snapshot());
 
@@ -1881,7 +1892,11 @@ where
                 // Everything in the current block after a terminal statement is unreachable.
                 self.mark_unreachable();
             }
-            ast::Stmt::Global(ast::StmtGlobal { range: _, names }) => {
+            ast::Stmt::Global(ast::StmtGlobal {
+                range: _,
+                node_index: _,
+                names,
+            }) => {
                 for name in names {
                     let symbol_id = self.add_symbol(name.id.clone());
                     let symbol_table = self.current_place_table();
@@ -1904,16 +1919,26 @@ where
                 }
                 walk_stmt(self, stmt);
             }
-            ast::Stmt::Delete(ast::StmtDelete { targets, range: _ }) => {
+            ast::Stmt::Delete(ast::StmtDelete {
+                targets,
+                range: _,
+                node_index: _,
+            }) => {
+                // We will check the target expressions and then delete them.
+                walk_stmt(self, stmt);
                 for target in targets {
                     if let Ok(target) = PlaceExpr::try_from(target) {
                         let place_id = self.add_place(target);
                         self.current_place_table().mark_place_used(place_id);
+                        self.delete_binding(place_id);
                     }
                 }
-                walk_stmt(self, stmt);
             }
-            ast::Stmt::Expr(ast::StmtExpr { value, range: _ }) if self.in_module_scope() => {
+            ast::Stmt::Expr(ast::StmtExpr {
+                value,
+                range: _,
+                node_index: _,
+            }) if self.in_module_scope() => {
                 if let Some(expr) = dunder_all_extend_argument(value) {
                     self.add_standalone_expression(expr);
                 }
@@ -1958,7 +1983,7 @@ where
                         }
                         (ast::ExprContext::Load, _) => (true, false),
                         (ast::ExprContext::Store, _) => (false, true),
-                        (ast::ExprContext::Del, _) => (false, true),
+                        (ast::ExprContext::Del, _) => (true, true),
                         (ast::ExprContext::Invalid, _) => (false, false),
                     };
                     let place_id = self.add_place(place_expr);
@@ -2173,6 +2198,7 @@ where
             ast::Expr::BoolOp(ast::ExprBoolOp {
                 values,
                 range: _,
+                node_index: _,
                 op,
             }) => {
                 let pre_op = self.flow_snapshot();
@@ -2260,6 +2286,7 @@ where
         if let ast::Pattern::MatchStar(ast::PatternMatchStar {
             name: Some(name),
             range: _,
+            node_index: _,
         }) = pattern
         {
             let symbol = self.add_symbol(name.id().clone());
@@ -2299,7 +2326,7 @@ where
     }
 }
 
-impl SemanticSyntaxContext for SemanticIndexBuilder<'_> {
+impl SemanticSyntaxContext for SemanticIndexBuilder<'_, '_> {
     fn future_annotations_or_stub(&self) -> bool {
         self.has_future_annotations
     }
@@ -2324,7 +2351,7 @@ impl SemanticSyntaxContext for SemanticIndexBuilder<'_> {
             match scope.kind() {
                 ScopeKind::Class | ScopeKind::Lambda => return false,
                 ScopeKind::Function => {
-                    return scope.node().expect_function().is_async;
+                    return scope.node().expect_function(self.module).is_async;
                 }
                 ScopeKind::Comprehension
                 | ScopeKind::Module
@@ -2366,9 +2393,9 @@ impl SemanticSyntaxContext for SemanticIndexBuilder<'_> {
         for scope_info in self.scope_stack.iter().rev() {
             let scope = &self.scopes[scope_info.file_scope_id];
             let generators = match scope.node() {
-                NodeWithScopeKind::ListComprehension(node) => &node.generators,
-                NodeWithScopeKind::SetComprehension(node) => &node.generators,
-                NodeWithScopeKind::DictComprehension(node) => &node.generators,
+                NodeWithScopeKind::ListComprehension(node) => &node.node(self.module).generators,
+                NodeWithScopeKind::SetComprehension(node) => &node.node(self.module).generators,
+                NodeWithScopeKind::DictComprehension(node) => &node.node(self.module).generators,
                 _ => continue,
             };
             if generators
@@ -2409,31 +2436,31 @@ impl SemanticSyntaxContext for SemanticIndexBuilder<'_> {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-enum CurrentAssignment<'a> {
+enum CurrentAssignment<'ast, 'db> {
     Assign {
-        node: &'a ast::StmtAssign,
-        unpack: Option<(UnpackPosition, Unpack<'a>)>,
+        node: &'ast ast::StmtAssign,
+        unpack: Option<(UnpackPosition, Unpack<'db>)>,
     },
-    AnnAssign(&'a ast::StmtAnnAssign),
-    AugAssign(&'a ast::StmtAugAssign),
+    AnnAssign(&'ast ast::StmtAnnAssign),
+    AugAssign(&'ast ast::StmtAugAssign),
     For {
-        node: &'a ast::StmtFor,
-        unpack: Option<(UnpackPosition, Unpack<'a>)>,
+        node: &'ast ast::StmtFor,
+        unpack: Option<(UnpackPosition, Unpack<'db>)>,
     },
-    Named(&'a ast::ExprNamed),
+    Named(&'ast ast::ExprNamed),
     Comprehension {
-        node: &'a ast::Comprehension,
+        node: &'ast ast::Comprehension,
         first: bool,
-        unpack: Option<(UnpackPosition, Unpack<'a>)>,
+        unpack: Option<(UnpackPosition, Unpack<'db>)>,
     },
     WithItem {
-        item: &'a ast::WithItem,
+        item: &'ast ast::WithItem,
         is_async: bool,
-        unpack: Option<(UnpackPosition, Unpack<'a>)>,
+        unpack: Option<(UnpackPosition, Unpack<'db>)>,
     },
 }
 
-impl CurrentAssignment<'_> {
+impl CurrentAssignment<'_, '_> {
     fn unpack_position_mut(&mut self) -> Option<&mut UnpackPosition> {
         match self {
             Self::Assign { unpack, .. }
@@ -2445,28 +2472,28 @@ impl CurrentAssignment<'_> {
     }
 }
 
-impl<'a> From<&'a ast::StmtAnnAssign> for CurrentAssignment<'a> {
-    fn from(value: &'a ast::StmtAnnAssign) -> Self {
+impl<'ast> From<&'ast ast::StmtAnnAssign> for CurrentAssignment<'ast, '_> {
+    fn from(value: &'ast ast::StmtAnnAssign) -> Self {
         Self::AnnAssign(value)
     }
 }
 
-impl<'a> From<&'a ast::StmtAugAssign> for CurrentAssignment<'a> {
-    fn from(value: &'a ast::StmtAugAssign) -> Self {
+impl<'ast> From<&'ast ast::StmtAugAssign> for CurrentAssignment<'ast, '_> {
+    fn from(value: &'ast ast::StmtAugAssign) -> Self {
         Self::AugAssign(value)
     }
 }
 
-impl<'a> From<&'a ast::ExprNamed> for CurrentAssignment<'a> {
-    fn from(value: &'a ast::ExprNamed) -> Self {
+impl<'ast> From<&'ast ast::ExprNamed> for CurrentAssignment<'ast, '_> {
+    fn from(value: &'ast ast::ExprNamed) -> Self {
         Self::Named(value)
     }
 }
 
 #[derive(Debug, PartialEq)]
-struct CurrentMatchCase<'a> {
+struct CurrentMatchCase<'ast> {
     /// The pattern that's part of the current match case.
-    pattern: &'a ast::Pattern,
+    pattern: &'ast ast::Pattern,
 
     /// The index of the sub-pattern that's being currently visited within the pattern.
     ///
@@ -2488,20 +2515,20 @@ impl<'a> CurrentMatchCase<'a> {
     }
 }
 
-enum Unpackable<'a> {
-    Assign(&'a ast::StmtAssign),
-    For(&'a ast::StmtFor),
+enum Unpackable<'ast> {
+    Assign(&'ast ast::StmtAssign),
+    For(&'ast ast::StmtFor),
     WithItem {
-        item: &'a ast::WithItem,
+        item: &'ast ast::WithItem,
         is_async: bool,
     },
     Comprehension {
         first: bool,
-        node: &'a ast::Comprehension,
+        node: &'ast ast::Comprehension,
     },
 }
 
-impl<'a> Unpackable<'a> {
+impl<'ast> Unpackable<'ast> {
     const fn kind(&self) -> UnpackKind {
         match self {
             Unpackable::Assign(_) => UnpackKind::Assign,
@@ -2510,7 +2537,10 @@ impl<'a> Unpackable<'a> {
         }
     }
 
-    fn as_current_assignment(&self, unpack: Option<Unpack<'a>>) -> CurrentAssignment<'a> {
+    fn as_current_assignment<'db>(
+        &self,
+        unpack: Option<Unpack<'db>>,
+    ) -> CurrentAssignment<'ast, 'db> {
         let unpack = unpack.map(|unpack| (UnpackPosition::First, unpack));
         match self {
             Unpackable::Assign(stmt) => CurrentAssignment::Assign { node: stmt, unpack },
@@ -2540,6 +2570,7 @@ fn dunder_all_extend_argument(value: &ast::Expr) -> Option<&ast::Expr> {
                 args,
                 keywords,
                 range: _,
+                node_index: _,
             },
         ..
     } = value.as_call_expr()?;

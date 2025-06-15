@@ -116,7 +116,8 @@ impl AllMembers {
             | Type::SpecialForm(_)
             | Type::KnownInstance(_)
             | Type::TypeVar(_)
-            | Type::BoundSuper(_) => {
+            | Type::BoundSuper(_)
+            | Type::TypeIs(_) => {
                 if let Type::ClassLiteral(class_literal) = ty.to_meta_type(db) {
                     self.extend_with_class_members(db, class_literal);
                 }
@@ -195,6 +196,6 @@ impl AllMembers {
 
 /// List all members of a given type: anything that would be valid when accessed
 /// as an attribute on an object of the given type.
-pub(crate) fn all_members<'db>(db: &'db dyn Db, ty: Type<'db>) -> FxHashSet<Name> {
+pub fn all_members<'db>(db: &'db dyn Db, ty: Type<'db>) -> FxHashSet<Name> {
     AllMembers::of(db, ty).members
 }
